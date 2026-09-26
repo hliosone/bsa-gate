@@ -92,7 +92,7 @@ export default function AgentPage() {
 
         <div className="card">
           <h3>Spend cap</h3>
-          <p style={{ marginTop: 0 }}>A per-payment ceiling the principal sets on their agent. Facilitator policy, enforced by the gate.</p>
+          <p style={{ marginTop: 0 }}>A per-payment ceiling on the agent, enforced by the gate. In this demo the issuer sets it; principal-signed updates are next.</p>
           <label>Agent name<input value={capName} onChange={(e) => setCapName(e.target.value)} /></label>
           <label>Cap (USDC)<input value={capUsdc} onChange={(e) => setCapUsdc(e.target.value)} placeholder="e.g. 50" /></label>
           <div className="row" style={{ marginTop: 14 }}>

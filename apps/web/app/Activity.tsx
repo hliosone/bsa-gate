@@ -21,9 +21,11 @@ function ago(ts: number) {
 export default function Activity() {
   const [txs, setTxs] = useState<Tx[] | null>(null);
   const [err, setErr] = useState(false);
+  const [mode, setMode] = useState("");
 
   useEffect(() => {
     let live = true;
+    fetch(FACILITATOR + "/health").then((r) => r.json()).then((d) => { if (live) setMode(d.mode); }).catch(() => {});
     const load = () =>
       fetch(FACILITATOR + "/transactions")
         .then((r) => r.json())
@@ -72,9 +74,15 @@ export default function Activity() {
                   <td>{t.surface}</td>
                   <td>{t.ok ? <span className="pill ok">settled</span> : <span className="pill bad">blocked · {t.stage}</span>}</td>
                   <td>
-                    {t.txHash
-                      ? <a className="mono" href={`https://sepolia.etherscan.io/tx/${t.txHash}`} target="_blank" rel="noreferrer">{short(t.txHash)}</a>
-                      : <span className="mono" style={{ color: "var(--muted)" }}>—</span>}
+                    {!t.txHash ? (
+                      <span className="mono" style={{ color: "var(--muted)" }}>—</span>
+                    ) : mode === "live" ? (
+                      <a className="mono" href={`https://sepolia.etherscan.io/tx/${t.txHash}`} target="_blank" rel="noreferrer">{short(t.txHash)}</a>
+                    ) : (
+                      <span className="mono" title="Settled on a local Anvil fork — not on public Sepolia.">
+                        {short(t.txHash)} <span className="pill mut">local fork</span>
+                      </span>
+                    )}
                   </td>
                 </tr>
               ))}
