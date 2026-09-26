@@ -7,6 +7,8 @@
     "spike": "tsx src/scripts/spike.ts"
   },
   "dependencies": {
+    "@ensdomains/ensjs": "5.0.0-sepolia-fix.1",
+    "@ensdomains/ensjs-abi": "5.0.0-sepolia-fix.1",
     "dotenv": "^16.4.7",
     "viem": "^2.21.55"
   },

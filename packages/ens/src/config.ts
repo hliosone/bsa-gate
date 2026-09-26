@@ -15,26 +15,40 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 loadEnv({ path: path.resolve(here, "../../../.env") });
 
 export const CHAIN_ID = 11155111 as const;
-export const RPC_URL =
+export const LIVE_RPC =
   process.env.SEPOLIA_RPC_URL ?? "https://ethereum-sepolia-rpc.publicnode.com";
+export const FORK_RPC = process.env.FORK_RPC_URL ?? "http://127.0.0.1:8545";
 
-function addr(key: string, fallback: string): Address {
-  const value = (process.env[key] ?? fallback) as Address;
+/** RPC_MODE=fork (default — free, for dev + tests) or live (real Sepolia). */
+export const RPC_MODE = (process.env.RPC_MODE ?? "fork") as "fork" | "live";
+export const RPC_URL = RPC_MODE === "live" ? LIVE_RPC : FORK_RPC;
+
+function must(key: string, value: string): Address {
   if (!isAddress(value)) throw new Error(`Invalid address for ${key}: ${value}`);
-  return value;
+  return value as Address;
 }
 
-/** Pinned ENSv2 (Sepolia) + USDC addresses; env overrides the fallback. */
-export const ADDRESSES = {
-  rootRegistry: addr("ENS_ROOT_REGISTRY", "0x9703dbd26dab89504490994138cf2c575251a9ce"),
-  ethRegistry: addr("ENS_ETH_REGISTRY", "0x657ea849311d3d5823348dded7c2aaafb3ede09e"),
-  universalResolver: addr("ENS_UNIVERSAL_RESOLVER", "0x5d25c1d6acbb71b7a28aa7899618a3412a8303e3"),
-  verifiableFactory: addr("ENS_VERIFIABLE_FACTORY", "0x9e726eb570beb6bceb495ab8cda7df517d4e841c"),
-  permResolverImpl: addr("ENS_PERMISSIONED_RESOLVER_IMPL", "0x14f09fd05d4585759e54844dc9b00147131cf243"),
-  ethRegistrar: addr("ENS_ETH_REGISTRAR", "0xabe76f6c8dfced81aa5a2bb8034202a7136b94ca"),
-  mockUsdc: addr("ENS_MOCK_USDC", "0x16f95d91dba7da3aca778ec053df0ff6c6a8aa8e"),
-  usdc: addr("USDC", "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"),
+/**
+ * ENSv2 Sepolia addresses — sourced from @ensdomains/ensjs (sepolia-fix tag),
+ * i.e. the authoritative post-2026-09-15 redeploy set. NOTE: these differ from
+ * the docs "deployments" page (which lists an older set).
+ */
+export const ENS = {
+  ethRegistry: must("ethRegistry", "0xc960f7217d3643b525ef36bec8adf86953cd9ab8"),
+  verifiableFactory: must("verifiableFactory", "0xd2a632d8a8b67c2c4398c255cbd7af8dd7236198"),
+  userRegistryImpl: must("userRegistryImpl", "0x0f99e7ea74903afcb7224d0354fd7428a6f92917"),
+  permResolverImpl: must("permResolverImpl", "0xdce5205a553573ffd47629327dddf36186022ffa"),
+  ethRegistrar: must("ethRegistrar", "0x8c2e866b439358c41ae05de9cbe8a00bfefaffca"),
+  universalResolver: must("universalResolver", "0xeEeEEEeE14D718C2B47D9923Deab1335E144EeEe"),
+  /** ENS's own USDC used for .eth registration fees (free-mintable), NOT the payment token. */
+  registrationUsdc: must("registrationUsdc", "0x3dfc8b53dafa5ebbb071a8b97678ab534ed838d9"),
 } as const;
+
+/** Circle USDC on Sepolia (full EIP-3009) — the x402 payment token. */
+export const USDC = must(
+  "usdc",
+  process.env.USDC ?? "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+);
 
 export const publicClient = createPublicClient({ chain: sepolia, transport: http(RPC_URL) });
 
