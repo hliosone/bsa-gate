@@ -61,9 +61,9 @@ Shared resolver ── records (over18, jurisdiction) writable ONLY by the issue
 | Path | What it does | Tech |
 |---|---|---|
 | `packages/ens` | ENSv2 ops: deploy registry/resolver (via VerifiableFactory), register names, grant roles, write/read attestations, walk registries | TypeScript · viem |
-| `packages/facilitator` | the gate: `eip3009` (settle), `ensGate` (permission walk), `intercepta` (screen), `policy` (spend cap), `gate` (pipeline), `server` (HTTP API), `txlog` | TypeScript · viem · Express |
+| `packages/facilitator` | the gate: `eip3009` (settle), `ensGate` (permission walk), `intercepta` (screen), `policy` (spend cap), `eudi` (EU wallet KYC via OpenID4VP), `gate` (pipeline), `server` (HTTP API), `txlog` | TypeScript · viem · Express |
 | `apps/agent` | autonomous x402 client (agent-to-agent payment) | TypeScript |
-| `apps/web` | Next.js app: landing, checkout, issuer console (issue / delegate / sign a cap), live activity feed | Next.js · viem |
+| `apps/web` | Next.js app: landing, checkout, **get-verified (EU wallet KYC + self-issue)**, agent console (delegate / sign a cap), live activity feed | Next.js · viem |
 | `plugins/woocommerce` | "Pay with USDC" gateway + REST settle + **per-product attestations** | PHP · WordPress |
 | `plugins/shopify` | hosted pay page + Admin API write-back + **per-product attestations** | Node · Express |
 
@@ -77,6 +77,10 @@ Shared resolver ── records (over18, jurisdiction) writable ONLY by the issue
   them with **`RENEW` only** — no `SET_RESOLVER`, no sub-minting, no transfer.
 - Attestations (`over18`, `jurisdiction`) are resolver records **only the issuer can write** (the
   issuer is the resolver admin; the user holds no resolver role) — the owner **cannot forge** them.
+- **Where attestations come from**: a real **EU digital identity wallet** (EUDI / OpenID4VP — the gate
+  verifies a PID via the reference verifier, derives `over18` from birthdate and `jurisdiction` from
+  nationality, and writes only those derived values on-chain), or a **self-issue demo** path for judges
+  without a wallet. Both land in the same `issueIdentity` call.
 - **Per-key delegation** (`authorizeTextRoles`): the finest-grained EAC — an account can be scoped to
   write a *single* record key (e.g. only `over18`) and nothing else. Proven by test.
 - The principal delegates a **non-transferable, revocable** agent `agent.alice.bsagate.eth`
