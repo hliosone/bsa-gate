@@ -24,6 +24,21 @@ export const EIP3009_TYPES = {
   ],
 };
 
+// Principal-signed cap update (must match the facilitator's policy.CAP_EIP712).
+export const SETCAP_TYPES = {
+  EIP712Domain: [
+    { name: "name", type: "string" },
+    { name: "version", type: "string" },
+    { name: "chainId", type: "uint256" },
+  ],
+  SetCap: [
+    { name: "agentName", type: "string" },
+    { name: "cap", type: "uint256" },
+    { name: "deadline", type: "uint256" },
+  ],
+};
+export const SETCAP_DOMAIN = { name: "BSA Gate", version: "1", chainId: CHAIN_ID };
+
 export function randomNonce(): string {
   const b = new Uint8Array(32);
   crypto.getRandomValues(b);

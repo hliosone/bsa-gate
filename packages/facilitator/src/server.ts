@@ -11,11 +11,12 @@ import { RPC_MODE, USDC, account, wallet } from "@bsa/ens/config";
 import { evaluate, type GateContext } from "./gate.js";
 import { setupNamespace, issueIdentity, delegateAgent, revokeAgent } from "./issuer.js";
 import { load, save } from "./deployments.js";
-import { capOf as agentCapOf, setCap } from "./policy.js";
+import { capOf as agentCapOf, principalLabel, setCap, verifyCapAuthorization } from "./policy.js";
 import { record as recordTx, list as listTx } from "./txlog.js";
 import type { GateResult, PaymentPayload, PaymentRequirements } from "./types.js";
 
 const PORT = Number(process.env.PORT ?? 8787);
+const CHAIN_ID = 11155111; // Sepolia (fork reports the same); binds the cap-update signature.
 const app = express();
 app.use(express.json());
 // CORS — allow the web app (and plugins) to call the facilitator from the browser.
@@ -181,8 +182,21 @@ app.post(
 app.post(
   "/policy/cap",
   wrap(async (req, res) => {
-    const { agentName, cap } = req.body as { agentName: string; cap?: string | null };
-    const next = setCap(load(), agentName, cap != null && cap !== "" ? BigInt(cap) : null);
+    const { agentName, cap, deadline, signature } = req.body as {
+      agentName: string;
+      cap?: string | null;
+      deadline?: string;
+      signature?: Hex;
+    };
+    const store = load();
+    const label = principalLabel(agentName);
+    const principal = label ? store.users[label]?.owner : undefined;
+    if (!principal) return void res.status(400).json({ error: `no principal identity found for ${agentName}` });
+    if (!signature || !deadline) return void res.status(401).json({ error: "principal signature required to change a cap" });
+    const capValue = cap != null && cap !== "" ? BigInt(cap) : 0n; // 0 = clear
+    const auth = await verifyCapAuthorization({ agentName, cap: capValue, deadline: BigInt(deadline), signature }, principal, CHAIN_ID);
+    if (!auth.ok) return void res.status(401).json({ error: auth.reason });
+    const next = setCap(store, agentName, capValue === 0n ? null : capValue);
     save(next);
     res.json({ agentName, cap: next.agents[agentName]?.cap ?? null });
   }),

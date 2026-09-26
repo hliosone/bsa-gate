@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { FACILITATOR, connect } from "../config";
+import { FACILITATOR, SETCAP_DOMAIN, SETCAP_TYPES, connect, eth } from "../config";
 
 export default function AgentPage() {
   const [addr, setAddr] = useState("");
@@ -38,6 +38,34 @@ export default function AgentPage() {
       if (!owner) setOwner(a);
     } catch (e) {
       say({ error: String((e as Error)?.message ?? e) });
+    }
+  }
+
+  // The principal (owner of the parent identity) signs the cap change; the agent cannot.
+  async function signCap(clear: boolean) {
+    setBusy(true);
+    try {
+      let capBase = "0";
+      if (!clear) {
+        const n = Number(capUsdc);
+        if (!Number.isFinite(n) || n <= 0) { say({ error: "cap must be a positive number of USDC" }); return; }
+        capBase = String(Math.round(n * 1e6));
+      }
+      const from = await connect(); // must be the principal, e.g. the owner of alice.bsagate.eth
+      const deadline = String(Math.floor(Date.now() / 1000) + 3600);
+      const message = { agentName: capName, cap: capBase, deadline };
+      const typedData = { types: SETCAP_TYPES, domain: SETCAP_DOMAIN, primaryType: "SetCap", message };
+      const signature = await eth().request({ method: "eth_signTypedData_v4", params: [from, JSON.stringify(typedData)] });
+      const r = await fetch(FACILITATOR + "/policy/cap", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ agentName: capName, cap: clear ? null : capBase, deadline, signature }),
+      });
+      say(await r.json());
+    } catch (e) {
+      say({ error: String((e as Error)?.message ?? e) });
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -92,20 +120,12 @@ export default function AgentPage() {
 
         <div className="card">
           <h3>Spend cap</h3>
-          <p style={{ marginTop: 0 }}>A per-payment ceiling on the agent, enforced by the gate. In this demo the issuer sets it; principal-signed updates are next.</p>
+          <p style={{ marginTop: 0 }}>A per-payment ceiling on the agent, enforced by the gate. The <b>principal signs</b> the change, so the agent can never raise its own cap.</p>
           <label>Agent name<input value={capName} onChange={(e) => setCapName(e.target.value)} /></label>
           <label>Cap (USDC)<input value={capUsdc} onChange={(e) => setCapUsdc(e.target.value)} placeholder="e.g. 50" /></label>
           <div className="row" style={{ marginTop: 14 }}>
-            <button
-              className="btn sm"
-              disabled={busy}
-              onClick={() => {
-                const n = Number(capUsdc);
-                if (!Number.isFinite(n) || n <= 0) return say({ error: "cap must be a positive number of USDC" });
-                return post("/policy/cap", { agentName: capName, cap: String(Math.round(n * 1e6)) });
-              }}
-            >Set cap</button>
-            <button className="btn sm ghost" disabled={busy} onClick={() => post("/policy/cap", { agentName: capName, cap: null })}>Clear</button>
+            <button className="btn sm" disabled={busy} onClick={() => signCap(false)}>Sign &amp; set cap</button>
+            <button className="btn sm ghost" disabled={busy} onClick={() => signCap(true)}>Sign &amp; clear</button>
           </div>
         </div>
       </div>
