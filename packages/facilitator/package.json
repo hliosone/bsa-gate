@@ -11,7 +11,8 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "start": "tsx src/server.ts",
-    "demo": "tsx scripts/demo.ts"
+    "demo": "tsx scripts/demo.ts",
+    "demo:agent": "tsx scripts/demo-agent.ts"
   },
   "dependencies": {
     "@bsa/ens": "workspace:*",
