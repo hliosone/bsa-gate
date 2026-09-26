@@ -36,6 +36,8 @@ add_action(
 		require_once BSAGATE_DIR . 'includes/class-bsagate-facilitator.php';
 		require_once BSAGATE_DIR . 'includes/class-bsagate-rest.php';
 		BSAGate_REST::init();
+			require_once BSAGATE_DIR . 'includes/class-bsagate-product.php';
+			BSAGate_Product::init();
 	},
 	5
 );

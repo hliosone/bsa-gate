@@ -88,7 +88,7 @@ class BSAGate_REST {
 			'token'               => $s['usdc'],
 			'payTo'               => $s['merchant'],
 			'amount'              => (string) (int) round( ( (float) $order->get_total() ) * 1000000 ),
-			'requiredAttestations' => self::parse_attestations( $s['required_attestations'] ),
+			'requiredAttestations' => self::required_for_order( $order, $s['required_attestations'] ),
 		);
 
 		// payload — pass the client-signed authorization + claimed ENS name through;
@@ -160,6 +160,31 @@ class BSAGate_REST {
 			'required_attestations' => '{"over18":"true"}',
 		);
 		return wp_parse_args( is_array( $o ) ? $o : array(), $defaults );
+	}
+
+	/**
+	 * Required attestations for an order: the union of each line-item product's
+	 * `_bsagate_attestations`. Falls back to the gateway default only when no product sets one.
+	 */
+	private static function required_for_order( $order, $fallback_raw ) {
+		$merged = array();
+		$found  = false;
+		foreach ( $order->get_items() as $item ) {
+			$product = is_callable( array( $item, 'get_product' ) ) ? $item->get_product() : null;
+			if ( ! $product ) {
+				continue;
+			}
+			$raw = (string) $product->get_meta( '_bsagate_attestations', true );
+			if ( '' === $raw && $product->get_parent_id() ) {
+				$raw = (string) get_post_meta( $product->get_parent_id(), '_bsagate_attestations', true );
+			}
+			$attests = self::parse_attestations( $raw );
+			if ( ! empty( $attests ) ) {
+				$found  = true;
+				$merged = array_merge( $merged, $attests );
+			}
+		}
+		return $found ? $merged : self::parse_attestations( $fallback_raw );
 	}
 
 	private static function parse_attestations( $raw ) {
