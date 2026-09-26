@@ -7,7 +7,7 @@
  */
 import express from "express";
 import { type Address, type Hex, zeroAddress } from "viem";
-import { getState, getSubregistry } from "@bsa/ens";
+import { getState, getSubregistry, readAttestation } from "@bsa/ens";
 import { RPC_MODE, USDC, account, wallet } from "@bsa/ens/config";
 import { evaluate, type GateContext } from "./gate.js";
 import { setupNamespace, issueIdentity, delegateAgent, revokeAgent } from "./issuer.js";
@@ -197,7 +197,7 @@ app.post(
 );
 
 // ── EUDI wallet KYC (OpenID4VP): verify a real PID, derive attestations, then issue ─
-type EudiSession = { tx: string; nonce: string; label: string; owner: Address; createdAt: number; issued?: Promise<{ name: string; registry: Address }> };
+type EudiSession = { tx: string; nonce: string; label: string; owner: Address; createdAt: number; issued?: Promise<unknown>; result?: { name: string; attestations: Record<string, string> }; error?: string };
 const eudiSessions = new Map<string, EudiSession>();
 const sanitizeLabel = (raw: string) =>
   ((String(raw ?? "").trim().toLowerCase().replace(/[^a-z0-9-]/g, "") || "guest").slice(0, 24)) + "-" + randomBytes(2).toString("hex");
@@ -221,18 +221,47 @@ app.get(
   wrap(async (req, res) => {
     const session = eudiSessions.get(req.params.sessionId);
     if (!session) return void res.status(404).json({ error: "unknown or expired session" });
+    // Once issuance has started we never re-poll the verifier; report its progress.
+    if (session.result) return void res.json({ state: "verified", ...session.result });
+    if (session.error) return void res.json({ state: "error", error: session.error });
+    if (session.issued) return void res.json({ state: "issuing" }); // wallet shared; minting on-chain
     const st = await pidStatus(session.tx);
     if (st.state !== "verified") return void res.json(st);
-    // Verified by the EUDI backend: derive attestations and issue exactly once per session.
+    // Verified by the EUDI backend: kick off on-chain issuance ONCE, without blocking the poll,
+    // so the UI can show an "issuing" state instead of hanging on "confirm in your wallet".
     const attestations = mapClaims(st.claims);
-    session.issued ??= issueIdentity(wallet("issuer"), load().namespace!, session.label, session.owner, attestations).then((r) => {
-      const s2 = load();
-      s2.users[session.label] = { registry: r.registry, owner: session.owner };
-      save(s2);
-      return r;
-    });
-    const { name } = await session.issued;
-    res.json({ state: "verified", name, attestations });
+    session.issued = issueIdentity(wallet("issuer"), load().namespace!, session.label, session.owner, attestations)
+      .then((r) => {
+        const s2 = load();
+        s2.users[session.label] = { registry: r.registry, owner: session.owner };
+        save(s2);
+        session.result = { name: r.name, attestations };
+      })
+      .catch((e) => {
+        session.error = String((e as Error)?.message ?? e);
+      });
+    res.json({ state: "issuing" });
+  }),
+);
+
+// Look up the identity a wallet already holds (so the UI can skip re-verifying on revisit).
+app.get(
+  "/identity/mine",
+  wrap(async (req, res) => {
+    const owner = String(req.query.owner ?? "").toLowerCase();
+    if (!owner) return void res.status(400).json({ error: "owner query param required" });
+    const store = load();
+    const hit = Object.entries(store.users).find(([, u]) => u.owner.toLowerCase() === owner);
+    if (!hit) return void res.json({ name: null });
+    const name = `${hit[0]}.bsagate.eth`;
+    const attestations: Record<string, string> = {};
+    if (store.namespace) {
+      for (const key of ["over18", "jurisdiction"]) {
+        const v = await readAttestation(store.namespace.resolver, name, key);
+        if (v) attestations[key] = v;
+      }
+    }
+    res.json({ name, attestations });
   }),
 );
 
