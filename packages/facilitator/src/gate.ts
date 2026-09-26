@@ -20,6 +20,7 @@ export async function evaluate(
   ctx: GateContext,
   payload: PaymentPayload,
   req: PaymentRequirements,
+  opts: { settle?: boolean } = {},
 ): Promise<GateResult> {
   const auth = payload.authorization;
 
@@ -41,6 +42,9 @@ export async function evaluate(
   // 4. Intercepta: is this payment safe to settle?
   const s = await screen({ payer: auth.from, payee: req.payTo });
   if (!s.ok) return { ok: false, stage: "intercepta", reasons: s.reasons, identityName: who.identityName };
+
+  // Dry-run (x402 /verify): everything passed, but do not move funds.
+  if (opts.settle === false) return { ok: true, stage: "intercepta", reasons: [], identityName: who.identityName };
 
   // 5. Settle — USDC moves payer → payee via transferWithAuthorization.
   const txHash = await settleAuthorization(ctx.relayer, req.token, auth);

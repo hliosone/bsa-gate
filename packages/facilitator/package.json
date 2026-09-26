@@ -10,7 +10,8 @@
   },
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "start": "tsx src/server.ts"
+    "start": "tsx src/server.ts",
+    "demo": "tsx scripts/demo.ts"
   },
   "dependencies": {
     "@bsa/ens": "workspace:*",
