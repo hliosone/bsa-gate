@@ -1,0 +1,66 @@
+name: bsa-gate-wc-demo
+
+# WordPress + WooCommerce + the BSA Gate plugin. The facilitator runs on the HOST
+# (localhost:8787, RPC_MODE=fork); the WP container reaches it via host.docker.internal.
+
+services:
+  db:
+    image: mariadb:11.4
+    environment:
+      MARIADB_DATABASE: wordpress
+      MARIADB_USER: wp
+      MARIADB_PASSWORD: wp_pass
+      MARIADB_ROOT_PASSWORD: root_pass
+    volumes: [db_data:/var/lib/mysql]
+    networks: [appnet]
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  wordpress:
+    image: wordpress:php8.3-apache
+    depends_on:
+      db: { condition: service_healthy }
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_USER: wp
+      WORDPRESS_DB_PASSWORD: wp_pass
+      WORDPRESS_DB_NAME: wordpress
+    volumes:
+      - wp_data:/var/www/html
+      - ../plugins/woocommerce:/var/www/html/wp-content/plugins/bsa-gate-woo
+    ports: ["8090:80"]
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    networks: [appnet]
+
+  wp-cli:
+    image: wordpress:cli-php8.3
+    depends_on:
+      db: { condition: service_healthy }
+      wordpress: { condition: service_started }
+    user: "33:33"
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_USER: wp
+      WORDPRESS_DB_PASSWORD: wp_pass
+      WORDPRESS_DB_NAME: wordpress
+    volumes:
+      - wp_data:/var/www/html
+      - ../plugins/woocommerce:/var/www/html/wp-content/plugins/bsa-gate-woo
+      - ./wordpress-init.sh:/init.sh:ro
+      - ./test:/test:ro
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    networks: [appnet]
+    command: sh /init.sh
+    restart: "no"
+
+volumes:
+  db_data:
+  wp_data:
+
+networks:
+  appnet:
+    driver: bridge

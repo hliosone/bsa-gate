@@ -11,6 +11,7 @@ import { RPC_MODE, USDC, account, wallet } from "@bsa/ens/config";
 import { evaluate, type GateContext } from "./gate.js";
 import { setupNamespace, issueIdentity, delegateAgent, revokeAgent } from "./issuer.js";
 import { load, save } from "./deployments.js";
+import { record as recordTx, list as listTx } from "./txlog.js";
 import type { GateResult, PaymentPayload, PaymentRequirements } from "./types.js";
 
 const PORT = Number(process.env.PORT ?? 8787);
@@ -80,6 +81,26 @@ function context(): GateContext {
       return c ? BigInt(c) : undefined;
     },
   };
+}
+
+function logResult(surface: string, payload: PaymentPayload, req: PaymentRequirements, result: GateResult) {
+  try {
+    recordTx({
+      surface,
+      ok: result.ok,
+      stage: result.stage,
+      txHash: result.txHash,
+      from: payload.authorization.from,
+      to: req.payTo,
+      amount: req.amount.toString(),
+      token: req.token,
+      ensName: payload.ensName,
+      identityName: result.identityName,
+      reasons: result.reasons,
+    });
+  } catch (e) {
+    console.error("[txlog]", e);
+  }
 }
 
 const wrap =
@@ -171,11 +192,22 @@ app.post(
 app.post(
   "/settle",
   wrap(async (req, res) => {
-    const { payload, requirements } = req.body as { payload: WirePayload; requirements: WireReq };
-    const result = await evaluate(context(), payloadFromWire(payload), reqFromWire(requirements));
+    const { payload, requirements, surface } = req.body as {
+      payload: WirePayload;
+      requirements: WireReq;
+      surface?: string;
+    };
+    const p = payloadFromWire(payload);
+    const r = reqFromWire(requirements);
+    const result = await evaluate(context(), p, r);
+    logResult(surface ?? "checkout", p, r, result);
     res.status(result.ok ? 200 : 402).json(result as GateResult);
   }),
 );
+
+app.get("/transactions", (req, res) => {
+  res.json({ transactions: listTx(req.query.address as string | undefined) });
+});
 
 // ── demo x402 resource ────────────────────────────────────────────────────────
 function demoRequirements(): WireReq {
@@ -198,7 +230,10 @@ app.get(
         .json({ error: "Payment Required", accepts: [demoRequirements()] });
     }
     const payload = JSON.parse(Buffer.from(header, "base64").toString("utf8")) as WirePayload;
-    const result = await evaluate(context(), payloadFromWire(payload), reqFromWire(demoRequirements()));
+    const p = payloadFromWire(payload);
+    const r = reqFromWire(demoRequirements());
+    const result = await evaluate(context(), p, r);
+    logResult("agent", p, r, result);
     if (!result.ok) return void res.status(402).json(result);
     res.json({ quote: { pair: "ETH/USD", price: 3990.12, ts: Date.now() }, payment: result });
   }),
