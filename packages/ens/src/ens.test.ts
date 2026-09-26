@@ -15,6 +15,7 @@ import {
   readAttestation,
   registerName,
   setAttestation,
+  unregisterName,
 } from "./ens.js";
 
 const issuer = wallet("issuer");
@@ -89,5 +90,14 @@ describe("ENSv2 core permission mechanism (fork)", () => {
         roleBitmap: 0n,
       }),
     ).rejects.toThrow();
+  });
+
+  it("principal can revoke their agent (on-chain kill switch), and the agent cannot", async () => {
+    expect((await getState(aliceRegistry, "agent")).status).toBe(NameStatus.REGISTERED);
+    // The agent itself cannot unregister its own name.
+    await expect(unregisterName(wallet("agent"), aliceRegistry, "agent")).rejects.toThrow();
+    // Alice holds ROLE_UNREGISTER on her registry → she revokes it.
+    await unregisterName(wallet("alice"), aliceRegistry, "agent");
+    expect((await getState(aliceRegistry, "agent")).status).not.toBe(NameStatus.REGISTERED);
   });
 });

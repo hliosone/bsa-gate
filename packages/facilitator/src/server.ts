@@ -9,7 +9,7 @@ import express from "express";
 import type { Address, Hex } from "viem";
 import { RPC_MODE, USDC, account, wallet } from "@bsa/ens/config";
 import { evaluate, type GateContext } from "./gate.js";
-import { setupNamespace, issueIdentity, delegateAgent } from "./issuer.js";
+import { setupNamespace, issueIdentity, delegateAgent, revokeAgent } from "./issuer.js";
 import { load, save } from "./deployments.js";
 import type { GateResult, PaymentPayload, PaymentRequirements } from "./types.js";
 
@@ -132,6 +132,21 @@ app.post(
     store.agents[agentName] = { owner: agentOwner, cap };
     save(store);
     res.json({ agentName });
+  }),
+);
+
+app.post(
+  "/admin/revoke",
+  wrap(async (req, res) => {
+    const store = load();
+    const { userLabel, agentLabel } = req.body as { userLabel: string; agentLabel: string };
+    const user = store.users[userLabel];
+    if (!user) throw new Error(`unknown user ${userLabel}`);
+    await revokeAgent(wallet("issuer"), user.registry, agentLabel);
+    const agentName = `${agentLabel}.${userLabel}.bsagate.eth`;
+    delete store.agents[agentName];
+    save(store);
+    res.json({ revoked: agentName });
   }),
 );
 

@@ -14,6 +14,7 @@ import {
   grantRootRole,
   registerName,
   setAttestation,
+  unregisterName,
 } from "@bsa/ens";
 import { ROOT } from "./ensGate.js";
 
@@ -72,4 +73,9 @@ export async function delegateAgent(
     resolver: ns.resolver,
     roleBitmap: AGENT_OWNER_ROLES,
   });
+}
+
+/** Revoke an agent. `signer` is the principal (their kill switch) or the issuer (admin). */
+export async function revokeAgent(signer: Signer, userRegistry: Address, agentLabel: string): Promise<void> {
+  await unregisterName(signer, userRegistry, agentLabel);
 }

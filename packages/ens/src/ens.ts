@@ -20,6 +20,7 @@ import { userRegistryRegisterSnippet } from "@ensdomains/ensjs-abi/v2/userRegist
 import {
   permissionedRegistryGetStateSnippet,
   permissionedRegistryGetSubregistrySnippet,
+  permissionedRegistryUnregisterSnippet,
 } from "@ensdomains/ensjs-abi/v2/permissionedRegistry";
 import {
   verifiableFactoryDeployProxySnippet,
@@ -180,6 +181,17 @@ export async function registerName(signer: Signer, a: RegisterArgs) {
       a.roleBitmap ?? 0n,
       a.expiry ?? oneYearFromNow(),
     ],
+  });
+  return receipt(hash);
+}
+
+/** Revoke a name. Caller must hold ROLE_UNREGISTER on the name or the registry root. */
+export async function unregisterName(signer: Signer, registry: Address, label: string) {
+  const hash = await signer.writeContract({
+    address: registry,
+    abi: permissionedRegistryUnregisterSnippet,
+    functionName: "unregister",
+    args: [BigInt(labelhash(label))],
   });
   return receipt(hash);
 }
