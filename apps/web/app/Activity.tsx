@@ -18,6 +18,28 @@ function ago(ts: number) {
   return h < 24 ? `${h}h ago` : `${Math.floor(h / 24)}d ago`;
 }
 
+/** Turn the raw gate reason into a short, human label (full text stays in the hover tooltip). */
+function reasonText(t: Tx): string {
+  const r = (t.reasons || []).join(" ").toLowerCase();
+  if (!r) return t.ok ? "" : t.stage;
+  if (r.includes("over18")) return "not verified 18+";
+  if (r.includes("jurisdiction")) return "wrong jurisdiction";
+  if (r.includes("cap")) return "over the spend cap";
+  if (/sanction|scam|blacklist|mixer|flagged|drainer|toxic/.test(r)) {
+    const traits: string[] = [];
+    if (r.includes("sanction")) traits.push("sanctioned");
+    if (r.includes("scam")) traits.push("known scammer");
+    if (r.includes("blacklist")) traits.push("blacklisted");
+    if (r.includes("mixer")) traits.push("mixer exposure");
+    if (r.includes("drainer")) traits.push("wallet drainer");
+    if (r.includes("toxic")) traits.push("high risk score");
+    return traits.length ? `Intercepta: ${traits.join(", ")}` : "flagged by Intercepta";
+  }
+  if (/not registered|does not own|subname|expired/.test(r)) return "no valid identity";
+  if (t.stage === "verify") return "bad payment signature";
+  return t.stage;
+}
+
 export default function Activity() {
   const [txs, setTxs] = useState<Tx[] | null>(null);
   const [err, setErr] = useState(false);
@@ -58,13 +80,13 @@ export default function Activity() {
         <div className="tbl-scroll">
           <table>
             <thead>
-              <tr><th>When</th><th>Identity</th><th>Amount</th><th>Surface</th><th>Result</th><th>Tx</th></tr>
+              <tr><th>When</th><th>Identity</th><th>Amount</th><th>Surface</th><th>Result</th><th>Reason</th><th>Tx</th></tr>
             </thead>
             <tbody>
-              {txs === null && !err && <tr><td colSpan={6} className="empty">Loading…</td></tr>}
-              {err && <tr><td colSpan={6} className="empty">Facilitator offline — start it on :8787 to see live payments.</td></tr>}
+              {txs === null && !err && <tr><td colSpan={7} className="empty">Loading…</td></tr>}
+              {err && <tr><td colSpan={7} className="empty">Facilitator offline — start it on :8787 to see live payments.</td></tr>}
               {txs !== null && rows.length === 0 && !err && (
-                <tr><td colSpan={6} className="empty">No payments yet. Run the checkout demo to see one here.</td></tr>
+                <tr><td colSpan={7} className="empty">No payments yet. Run the checkout demo to see one here.</td></tr>
               )}
               {rows.map((t) => (
                 <tr key={t.id}>
@@ -73,6 +95,13 @@ export default function Activity() {
                   <td className="num">{usdc(t.amount)} USDC</td>
                   <td>{t.surface}</td>
                   <td>{t.ok ? <span className="pill ok">settled</span> : <span className="pill bad">blocked · {t.stage}</span>}</td>
+                  <td style={{ maxWidth: 220 }}>
+                    {t.ok ? (
+                      <span style={{ color: "var(--muted)" }}>all checks passed</span>
+                    ) : (
+                      <span title={(t.reasons || []).join("; ")}>{reasonText(t)}</span>
+                    )}
+                  </td>
                   <td>
                     {!t.txHash ? (
                       <span className="mono" style={{ color: "var(--muted)" }}>—</span>

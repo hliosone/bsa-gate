@@ -15,6 +15,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <a className="brand" href="/"><span className="mark" />BSA Gate</a>
             <nav>
               <a href="/">Overview</a>
+              <a href="/get-verified">Get verified</a>
               <a href="/checkout">Checkout</a>
               <a className="hide-sm" href="/agent">Agent console</a>
             </nav>
