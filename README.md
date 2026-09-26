@@ -66,6 +66,8 @@ Shared resolver ── records (over18, jurisdiction) writable ONLY by the issue
   them with **`RENEW` only** — no `SET_RESOLVER`, no sub-minting, no transfer.
 - Attestations (`over18`, `jurisdiction`) are resolver records **only the issuer can write** (the
   issuer is the resolver admin; the user holds no resolver role) — the owner **cannot forge** them.
+- **Per-key delegation** (`authorizeTextRoles`): the finest-grained EAC — an account can be scoped to
+  write a *single* record key (e.g. only `over18`) and nothing else. Proven by test.
 - The principal delegates a **non-transferable, revocable** agent `agent.alice.bsagate.eth`
   (`roleBitmap = 0`); the agent **inherits** the principal's attestations by living under their
   name, and the principal holds **`ROLE_UNREGISTER`** = an on-chain kill switch.
@@ -110,7 +112,7 @@ pnpm install
 cp .env.example .env                 # fill the 5 role keys (issuer, alice, agent, merchant, bob)
 anvil --fork-url <sepolia-rpc>       # a local fork of Sepolia
 
-pnpm test                            # 25 tests: ENS (6) + gate (7) + policy (12), all on the fork
+pnpm test                            # 29 tests: ENS (7) + gate (10) + policy (12), all on the fork
 
 RPC_MODE=fork PORT=8787 pnpm --filter @bsa/facilitator start
 sh packages/facilitator/scripts/fork-setup.sh   # deploy namespace + issue alice/agent/bob
@@ -137,10 +139,10 @@ The full flow — including real Intercepta screening — ran on **real Sepolia*
 
 ## Status
 
-ENS layer ✓ · facilitator gate ✓ (**25/25 tests**) · principal-signed spend cap ✓ · agent
-revocation ✓ · HTTP API ✓ · agent a2a ✓ · **live Intercepta screening ✓** · WooCommerce plugin ✓
-(per-product ✓) · Shopify service ✓ (per-product ✓) · Next.js web app + live activity feed ✓ ·
-**settled live on Sepolia ✓**.
+ENS layer ✓ (incl. per-key `authorizeTextRoles` ✓) · facilitator gate ✓ (**29/29 tests**) ·
+principal-signed spend cap ✓ · agent revocation ✓ · agent a2a proven live ✓ · **live Intercepta
+screening ✓** · WooCommerce plugin ✓ (per-product ✓) · Shopify service ✓ (per-product ✓) · Next.js
+web app: live activity feed with block reasons + **judge self-serve verification** ✓ · **settled live on Sepolia ✓**.
 
 **Left (packaging):** public hosted deployment for the demo URL, and the demo video.
 
