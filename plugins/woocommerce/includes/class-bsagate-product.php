@@ -27,8 +27,8 @@ class BSAGate_Product {
 			array(
 				'id'          => self::META,
 				'value'       => get_post_meta( get_the_ID(), self::META, true ),
-				'label'       => __( 'BSA Gate — required attestations (JSON)', 'bsa-gate-woo' ),
-				'description' => __( 'Who may buy this product, as JSON — e.g. {"over18":"true","jurisdiction":"CH"}. Leave blank to use the payment method default.', 'bsa-gate-woo' ),
+				'label'       => __( 'BSA Gate required attestations (JSON)', 'bsa-gate-woo' ),
+				'description' => __( 'Who may buy this product, as JSON, e.g. {"over18":"true","jurisdiction":"CH"}. Leave blank to use the payment method default.', 'bsa-gate-woo' ),
 				'desc_tip'    => true,
 				'placeholder' => '{"over18":"true"}',
 			)

@@ -170,7 +170,7 @@ function payPage(pid, s) {
     domain: { name: USDC_NAME, version: USDC_VERSION, chainId: CHAIN, verifyingContract: USDC },
   };
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>BSA Gate — Pay ${s.order}</title>
+<title>Pay ${s.order} · BSA Gate</title>
 <style>body{font-family:-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:#eaeef4;margin:0;padding:24px;color:#141a22}
 .card{max-width:460px;margin:6vh auto;background:#fff;border:1px solid #e3e6ec;border-radius:14px;padding:24px;box-shadow:0 8px 24px rgba(20,26,34,.06)}
 h3{margin:0 0 .3rem}.sub{color:#5c6b7c;font-size:.9rem;margin:0 0 1rem}
