@@ -1,0 +1,17 @@
+{
+  "name": "@bsa/agent",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "pay": "tsx src/pay.ts"
+  },
+  "dependencies": {
+    "@bsa/ens": "workspace:*",
+    "@bsa/facilitator": "workspace:*",
+    "viem": "^2.21.55"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0"
+  }
+}
