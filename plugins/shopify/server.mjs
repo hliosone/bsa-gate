@@ -116,6 +116,10 @@ app.post("/settle", async (req, res) => {
       await shopify(`orders/${orderId}/metafields.json`, "POST", {
         metafield: { namespace: "bsagate", key: "tx_hash", type: "single_line_text_field", value: out.txHash },
       });
+      // Also write the tx to the order Note so it's visible in the Shopify admin (metafields aren't shown by default).
+      await shopify(`orders/${orderId}.json`, "PUT", {
+        order: { id: orderId, note: `Paid with USDC via BSA Gate.\nTx: ${out.txHash}\nhttps://sepolia.etherscan.io/tx/${out.txHash}` },
+      });
       console.log(`[shopify] ${s.order} -> order ${orderId} PAID (tx ${out.txHash})`);
       return res.json({ paid: true, txHash: out.txHash, order: s.order, shopifyOrderId: orderId });
     } catch (e) {
