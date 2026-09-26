@@ -1,0 +1,21 @@
+.bsagate-order-pay { margin: 1.5rem 0; }
+.bsagate-card {
+  max-width: 460px; padding: 1.5rem; border: 1px solid #e3e6ec; border-radius: 14px;
+  background: #fff; box-shadow: 0 1px 2px rgba(20,26,34,.05), 0 8px 24px rgba(20,26,34,.06);
+  font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+.bsagate-card h3 { margin: 0 0 .35rem; font-size: 1.15rem; letter-spacing: -.01em; }
+.bsagate-sub { margin: 0 0 1rem; color: #5c6b7c; font-size: .9rem; line-height: 1.5; }
+.bsagate-label { display: block; font-size: .8rem; color: #334051; font-weight: 600; margin-bottom: 1rem; }
+.bsagate-label input {
+  display: block; width: 100%; margin-top: .35rem; padding: .6rem .7rem; font-size: .95rem;
+  border: 1px solid #d6dee9; border-radius: 9px; font-family: ui-monospace, Menlo, Consolas, monospace;
+}
+.bsagate-btn {
+  width: 100%; padding: .8rem 1rem; border: 0; border-radius: 10px; cursor: pointer;
+  background: #2f56d9; color: #fff; font-size: 1rem; font-weight: 600;
+}
+.bsagate-btn:disabled { opacity: .6; cursor: default; }
+.bsagate-status { margin: .85rem 0 0; font-size: .875rem; min-height: 1.2em; color: #5c6b7c; }
+.bsagate-status.ok { color: #1a8a53; }
+.bsagate-status.err { color: #cf3838; }
