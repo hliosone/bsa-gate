@@ -10,6 +10,14 @@ and attestations) and **whether it's safe** (Intercepta screening), then settles
 Remove ENSv2 and the product stops working: identity issuance, the attestations that gate a
 payment, agent delegation, spend caps, and revocation all live in ENSv2.
 
+## Live demo
+
+- **Web app:** https://bsa-gate.vercel.app — checkout, judge self-serve verification, live activity feed
+- **Facilitator gate:** https://bsa-gate-production.up.railway.app — [`/health`](https://bsa-gate-production.up.railway.app/health) (real Sepolia + Intercepta, `mode=live`)
+
+Both are public. The web app calls the live facilitator; free eligibility checks (`/verify`) run the
+full ENS walk + Intercepta screening without moving any USDC.
+
 ---
 
 ## Architecture
@@ -144,7 +152,8 @@ principal-signed spend cap ✓ · agent revocation ✓ · agent a2a proven live 
 screening ✓** · WooCommerce plugin ✓ (per-product ✓) · Shopify service ✓ (per-product ✓) · Next.js
 web app: live activity feed with block reasons + **judge self-serve verification** ✓ · **settled live on Sepolia ✓**.
 
-**Left (packaging):** public hosted deployment for the demo URL, and the demo video.
+**Deployed:** facilitator on Railway (Dockerfile) + web app on Vercel — both public (see **Live demo** above),
+gate proven live from the cloud (agent climb-the-ladder pass + refusals). **Left (packaging):** the demo video.
 
 ## Open-source libraries
 viem, `@ensdomains/ensjs` + `@ensdomains/ensjs-abi` (sepolia-fix), express, dotenv, vitest, tsx, Next.js.
