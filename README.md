@@ -14,9 +14,12 @@ payment, agent delegation, spend caps, and revocation all live in ENSv2.
 
 - **Web app:** https://bsa-gate.vercel.app — checkout, judge self-serve verification, live activity feed
 - **Facilitator gate:** https://bsa-gate-production.up.railway.app — [`/health`](https://bsa-gate-production.up.railway.app/health) (real Sepolia + Intercepta, `mode=live`)
+- **Shopify pay:** https://shopify-pay-production.up.railway.app/checkout — real Shopify draft order, paid in USDC through the gate
 
-Both are public. The web app calls the live facilitator; free eligibility checks (`/verify`) run the
-full ENS walk + Intercepta screening without moving any USDC.
+All public and wired to the same live facilitator; free eligibility checks (`/verify`) run the full ENS
+walk + Intercepta screening without moving any USDC. **WooCommerce** runs locally for the demo with its
+Facilitator URL pointed at the public gate, so a purchase settles live on Sepolia and shows up in the web
+app's activity feed alongside the Shopify and web payments.
 
 ---
 
