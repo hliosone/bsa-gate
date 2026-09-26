@@ -2,6 +2,11 @@
 import { useState } from "react";
 import { FACILITATOR, DOMAIN, EIP3009_TYPES, connect, eth, randomNonce } from "../config";
 
+const PRESETS = [
+  { name: "agent.alice.bsagate.eth", hint: "passes — inherits over18" },
+  { name: "bob.bsagate.eth", hint: "blocked — not 18+" },
+];
+
 export default function CheckoutPage() {
   const [ensName, setEns] = useState("agent.alice.bsagate.eth");
   const [busy, setBusy] = useState(false);
@@ -38,7 +43,7 @@ export default function CheckoutPage() {
       const res = await fetch(FACILITATOR + "/demo/quote", { headers: { "X-PAYMENT": header } });
       const body = await res.json();
       setOut(body);
-      if (res.status === 200) setStatus({ msg: "Settled ✓", kind: "ok" });
+      if (res.status === 200) setStatus({ msg: "Settled — USDC moved through the gate.", kind: "ok" });
       else setStatus({ msg: "Blocked: " + ((body.reasons || []).join("; ") || body.error || "not approved"), kind: "err" });
     } catch (e) {
       setStatus({ msg: String((e as Error)?.message ?? e), kind: "err" });
@@ -49,20 +54,41 @@ export default function CheckoutPage() {
 
   return (
     <>
-      <h1>Checkout demo</h1>
-      <p className="lede">
-        A merchant selling 18+ content requires <span className="mono">over18=true</span>. Pay 0.01 USDC through
-        the gate. Try <span className="mono">agent.alice.bsagate.eth</span> (passes) vs{" "}
-        <span className="mono">bob.bsagate.eth</span> (blocked — not 18+).
-      </p>
-      <div className="card">
-        <label>Your BSA Gate name<input value={ensName} onChange={(e) => setEns(e.target.value)} /></label>
-        <div className="row">
-          <button className="btn" disabled={busy} onClick={pay}>Connect wallet &amp; pay 0.01 USDC</button>
+      <section style={{ padding: "40px 0 8px" }}>
+        <p className="section-title">Checkout demo</p>
+        <h2>Pay a gated resource</h2>
+        <p className="lede" style={{ fontSize: 17 }}>
+          A merchant selling 18+ content requires <span className="mono">over18=true</span>. Pay 0.01 USDC through the
+          gate — eligible names settle, others are blocked with a reason.
+        </p>
+      </section>
+
+      <div className="card" style={{ maxWidth: 560 }}>
+        <label>Your BSA Gate name
+          <input value={ensName} onChange={(e) => setEns(e.target.value)} />
+        </label>
+        <div className="row" style={{ marginTop: 10 }}>
+          {PRESETS.map((p) => (
+            <button
+              key={p.name}
+              className="pill mut"
+              style={{ cursor: "pointer", background: ensName === p.name ? "var(--accent-weak)" : undefined }}
+              onClick={() => setEns(p.name)}
+              title={p.hint}
+            >
+              {p.name.split(".")[0]} · {p.hint}
+            </button>
+          ))}
+        </div>
+        <div className="row" style={{ marginTop: 16 }}>
+          <button className="btn" disabled={busy} onClick={pay}>
+            {busy ? "Working…" : "Connect wallet & pay 0.01 USDC"}
+          </button>
         </div>
         <p className={"status " + (status.kind || "")}>{status.msg}</p>
       </div>
-      {out ? <pre>{JSON.stringify(out, null, 2)}</pre> : null}
+
+      {out ? <pre style={{ maxWidth: 560, marginTop: 16 }}>{JSON.stringify(out, null, 2)}</pre> : null}
     </>
   );
 }
