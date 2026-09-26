@@ -171,16 +171,20 @@ export async function verifyAuthorization(
   return { ok: true };
 }
 
-/** Facilitator submits the authorization on-chain (it pays gas; funds move payer→payee). */
+/** Facilitator submits the authorization on-chain, waits for the receipt, and
+ *  confirms it succeeded (it pays gas; funds move payer→payee). */
 export async function settleAuthorization(relayer: Signer, token: Address, auth: Eip3009Authorization): Promise<Hex> {
   const sig = parseSignature(auth.signature);
   const v = Number(sig.v ?? (sig.yParity === 1 ? 28n : 27n));
-  return relayer.writeContract({
+  const hash = await relayer.writeContract({
     address: token,
     abi: usdcAbi,
     functionName: "transferWithAuthorization",
     args: [auth.from, auth.to, auth.value, auth.validAfter, auth.validBefore, auth.nonce, v, sig.r, sig.s],
   });
+  const receipt = await publicClient.waitForTransactionReceipt({ hash });
+  if (receipt.status !== "success") throw new Error(`settlement reverted on-chain (${hash})`);
+  return hash;
 }
 
 export async function usdcBalance(token: Address, who: Address): Promise<bigint> {

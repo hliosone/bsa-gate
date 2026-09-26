@@ -67,6 +67,11 @@ Set `RPC_MODE=live` to run against real Sepolia (uses Circle USDC `0x1c7D…7238
 ## Open-source libraries
 viem, `@ensdomains/ensjs` + `@ensdomains/ensjs-abi` (sepolia-fix), express, dotenv, vitest, tsx.
 
+## Live on Sepolia (proof)
+The full flow ran on **real Sepolia**: ENS namespace + identities + attestations deployed, the gate
+walked the real registries and read real attestations, and 0.01 USDC settled agent→merchant via EIP-3009.
+Settlement tx: [`0xd41740ca56f63962af775c0077a6cf910fa1b62059794d92fe0098601ab43b5f`](https://sepolia.etherscan.io/tx/0xd41740ca56f63962af775c0077a6cf910fa1b62059794d92fe0098601ab43b5f).
+
 ## Status
-ENS layer ✓ · facilitator gate ✓ (10/10 tests) · HTTP API ✓ · agent a2a ✓ · demo ✓.
-Commerce plugins + web UI + live-Sepolia pass: see `HOW_ITS_MADE.md`.
+ENS layer ✓ · facilitator gate ✓ (10/10 tests) · HTTP API ✓ · agent a2a ✓ · demo ✓ · live-Sepolia settlement ✓.
+Commerce plugins + web UI: in progress (see `HOW_ITS_MADE.md`).
