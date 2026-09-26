@@ -3,6 +3,7 @@ import { type Address, getAddress } from "viem";
 import { account, wallet } from "./config.js";
 import {
   AGENT_OWNER_ROLES,
+  authorizeTextKey,
   IDENTITY_OWNER_ROLES,
   NameStatus,
   ROLES,
@@ -78,6 +79,18 @@ describe("ENSv2 core permission mechanism (fork)", () => {
   it("alice CANNOT forge her own over18 attestation", async () => {
     await expect(setAttestation(wallet("alice"), resolver, NAME, "over18", "false")).rejects.toThrow();
     expect(await readAttestation(resolver, NAME, "over18")).toBe("true");
+  });
+
+  it("per-key EAC: a scoped attester can write only the key it was granted", async () => {
+    const attester = account("bob").address;
+    const N2 = "carol.bsagate.eth";
+    // Grant bob the `over18` key ONLY, on carol.bsagate.eth.
+    await authorizeTextKey(issuer, resolver, N2, "over18", attester, true);
+    // bob can write the granted key...
+    await setAttestation(wallet("bob"), resolver, N2, "over18", "true");
+    expect(await readAttestation(resolver, N2, "over18")).toBe("true");
+    // ...but NOT any other key on that name.
+    await expect(setAttestation(wallet("bob"), resolver, N2, "jurisdiction", "CH")).rejects.toThrow();
   });
 
   it("alice CANNOT register agents outside the issuer flow", async () => {

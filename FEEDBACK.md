@@ -32,7 +32,8 @@ Feedback:
   contracts. Surfacing the current addresses more prominently in the docs would help.
 - Registering names without `ROLE_SET_RESOLVER` and keeping the issuer as the resolver admin so
   only we can write attestations (the name owner can't forge them) is exactly what an attestation
-  authority needs — a genuinely differentiated capability. Per-key resolver authorization
-  (`authorizeTextRoles(name, key, account)`), to delegate a single record key, is the natural next step.
+  authority needs — a genuinely differentiated capability. We also use **per-key** resolver
+  authorization (`authorizeTextRoles`): a scoped attester granted only `over18` on a name can write
+  that key but is rejected writing any other (proven by test) — the finest-grained EAC delegation.
 - Small sharp edges that cost time: `grantRoles` reverts on `ROOT_RESOURCE` (must use
   `grantRootRoles`); `getSubregistry` takes the string label while `getState` takes the labelhash.

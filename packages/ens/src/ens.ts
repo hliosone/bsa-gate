@@ -14,8 +14,10 @@ import {
   labelhash,
   namehash,
   stringToBytes,
+  toHex,
   zeroAddress,
 } from "viem";
+import { packetToBytes } from "viem/ens";
 import { userRegistryRegisterSnippet } from "@ensdomains/ensjs-abi/v2/userRegistry";
 import {
   permissionedRegistryGetStateSnippet,
@@ -203,6 +205,43 @@ export async function setAttestation(signer: Signer, resolver: Address, name: st
     abi: resolverAbi,
     functionName: "setText",
     args: [namehash(name), key, value],
+  });
+  return receipt(hash);
+}
+
+const authorizeTextRolesAbi = [
+  {
+    name: "authorizeTextRoles",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "toName", type: "bytes" },
+      { name: "key", type: "string" },
+      { name: "account", type: "address" },
+      { name: "grant", type: "bool" },
+    ],
+    outputs: [{ name: "", type: "bool" }],
+  },
+] as const;
+
+/**
+ * Per-key Enhanced Access Control on the resolver: grant (or revoke) `account` the
+ * right to write ONE text-record key on a single name. This is the finest-grained
+ * ENSv2 delegation — e.g. a KYC attester may write only `over18`, nobody else.
+ */
+export async function authorizeTextKey(
+  signer: Signer,
+  resolver: Address,
+  name: string,
+  key: string,
+  account: Address,
+  grant = true,
+) {
+  const hash = await signer.writeContract({
+    address: resolver,
+    abi: authorizeTextRolesAbi,
+    functionName: "authorizeTextRoles",
+    args: [toHex(packetToBytes(name)), key, account, grant],
   });
   return receipt(hash);
 }
