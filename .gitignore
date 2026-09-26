@@ -20,6 +20,8 @@ broadcast/
 # next
 .next/
 .vercel/
+next-env.d.ts
+*.tsbuildinfo
 
 # misc
 .DS_Store

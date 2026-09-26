@@ -16,6 +16,14 @@ import type { GateResult, PaymentPayload, PaymentRequirements } from "./types.js
 const PORT = Number(process.env.PORT ?? 8787);
 const app = express();
 app.use(express.json());
+// CORS — allow the web app (and plugins) to call the facilitator from the browser.
+app.use((_req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, X-PAYMENT");
+  if (_req.method === "OPTIONS") return void res.sendStatus(204);
+  next();
+});
 
 // ── wire (JSON) <-> bigint conversions ──────────────────────────────────────
 type WireReq = {

@@ -73,5 +73,9 @@ walked the real registries and read real attestations, and 0.01 USDC settled age
 Settlement tx: [`0xd41740ca56f63962af775c0077a6cf910fa1b62059794d92fe0098601ab43b5f`](https://sepolia.etherscan.io/tx/0xd41740ca56f63962af775c0077a6cf910fa1b62059794d92fe0098601ab43b5f).
 
 ## Status
-ENS layer ✓ · facilitator gate ✓ (10/10 tests) · HTTP API ✓ · agent a2a ✓ · demo ✓ · live-Sepolia settlement ✓.
-Commerce plugins + web UI: in progress (see `HOW_ITS_MADE.md`).
+ENS layer ✓ · facilitator gate ✓ (11/11 tests) · agent revocation ✓ · HTTP API ✓ · agent a2a ✓ ·
+demo ✓ · live-Sepolia settlement ✓ · WooCommerce plugin ✓ · Shopify service ✓ · web UI (Next.js) ✓ (build passes).
+
+**Human-in-the-loop finishing:** Intercepta live call (drop in `INTERCEPTA_API_KEY` — integration is
+live-ready), browser-wallet testing of the plugins/UI (MetaMask), Shopify store + admin token, and a
+persistent hosted deployment for the public demo link.
