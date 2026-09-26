@@ -120,7 +120,7 @@ app.post("/settle", async (req, res) => {
     const r = await fetch(`${FAC}/settle`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ payload: { ensName, authorization }, requirements }),
+      body: JSON.stringify({ payload: { ensName, authorization }, requirements, surface: "shopify" }),
     });
     out = await r.json();
   } catch (e) {
