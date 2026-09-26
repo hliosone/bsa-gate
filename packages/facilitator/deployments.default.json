@@ -1,0 +1,22 @@
+{
+  "users": {
+    "alice": {
+      "registry": "0x3da70eb9A909e17787ac5Fb7ba51ed7b0a1F1F05",
+      "owner": "0x32e13a0710F9183778C10972Cf01BFEc57506560"
+    },
+    "bob": {
+      "registry": "0xb28e0f94E53dc1F082C5f1E812DB0471D4498448",
+      "owner": "0x1970Bca53327a2F9eb03edeB6F6c0e76799bDe5A"
+    }
+  },
+  "agents": {
+    "agent.alice.bsagate.eth": {
+      "owner": "0xA6B99dB364f116f261a8Eb7E4cB2bD9C49777963",
+      "cap": "50000000"
+    }
+  },
+  "namespace": {
+    "resolver": "0xd0Af8109611bBaDBc45bA02C33B40Ff76bbC10fA",
+    "bsaRegistry": "0x943eD4fb2ADb94F45D17F8023b62f20293A9dEE3"
+  }
+}
