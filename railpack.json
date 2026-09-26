@@ -1,5 +1,11 @@
 {
   "$schema": "https://schema.railpack.com",
+  "steps": {
+    "build": {
+      "inputs": [{ "step": "install" }],
+      "commands": []
+    }
+  },
   "deploy": {
     "startCommand": "pnpm --filter @bsa/facilitator start"
   }
