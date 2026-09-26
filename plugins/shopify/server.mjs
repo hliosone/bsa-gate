@@ -37,6 +37,19 @@ async function shopify(path, method = "GET", body) {
   return text ? JSON.parse(text) : {};
 }
 
+/** Per-product required attestations from a product's `bsagate.attestations` metafield (or null). */
+async function productAttestations(productId) {
+  try {
+    const m = await shopify(`products/${productId}/metafields.json?namespace=bsagate`);
+    const mf = (m.metafields || []).find((x) => x.key === "attestations");
+    if (mf) {
+      const v = JSON.parse(mf.value);
+      if (v && typeof v === "object") return v;
+    }
+  } catch { /* fall back to the service default */ }
+  return null;
+}
+
 const app = express();
 app.use(express.json());
 
@@ -46,22 +59,35 @@ const sessions = new Map();
 app.get("/health", (_req, res) => res.json({ ok: true, dryRun: DRY_RUN, facilitator: FAC }));
 
 app.get("/checkout", async (req, res) => {
-  const amount = String(req.query.amount ?? "19.99");
-  const order = String(req.query.order ?? `SHOP-${Date.now()}`);
-  const units = String(Math.round(parseFloat(amount) * 1e6));
+  const variantId = req.query.variant ?? process.env.SHOPIFY_VARIANT_ID;
   const pid = crypto.randomBytes(16).toString("hex");
-  const session = { order, units, settled: false };
-  if (!DRY_RUN) {
-    // Live: create a real Shopify draft order for this amount; complete it as paid on settle.
-    try {
+  const session = { settled: false };
+  try {
+    if (!DRY_RUN && variantId) {
+      // Per-product: price + required attestations come from the catalog product itself.
+      const v = (await shopify(`variants/${variantId}.json`)).variant;
+      session.units = String(Math.round(parseFloat(v.price) * 1e6));
+      session.attestations = await productAttestations(v.product_id);
       const d = await shopify("draft_orders.json", "POST", {
-        draft_order: { line_items: [{ title: order, price: amount, quantity: 1 }], note: "Paid with USDC via BSA Gate" },
+        draft_order: { line_items: [{ variant_id: Number(variantId), quantity: 1 }], note: "Paid with USDC via BSA Gate" },
       });
       session.draftId = d.draft_order.id;
-      session.order = d.draft_order.name; // e.g. #D1
-    } catch (e) {
-      return res.status(502).send(`Shopify draft order failed: ${String(e.message || e)}`);
+      session.order = d.draft_order.name;
+    } else {
+      // Fallback: a custom line item from ?amount (no catalog product), service-default attestations.
+      const amount = String(req.query.amount ?? "19.99");
+      session.order = String(req.query.order ?? `SHOP-${Date.now()}`);
+      session.units = String(Math.round(parseFloat(amount) * 1e6));
+      if (!DRY_RUN) {
+        const d = await shopify("draft_orders.json", "POST", {
+          draft_order: { line_items: [{ title: session.order, price: amount, quantity: 1 }], note: "Paid with USDC via BSA Gate" },
+        });
+        session.draftId = d.draft_order.id;
+        session.order = d.draft_order.name;
+      }
     }
+  } catch (e) {
+    return res.status(502).send(`Shopify checkout failed: ${String(e.message || e)}`);
   }
   sessions.set(pid, session);
   res.redirect(`/pay?pid=${pid}`);
@@ -87,7 +113,7 @@ app.post("/settle", async (req, res) => {
     token: USDC,
     payTo: PAYTO,
     amount: s.units,
-    requiredAttestations: ATTESTATIONS,
+    requiredAttestations: s.attestations ?? ATTESTATIONS,
   };
   let out;
   try {
