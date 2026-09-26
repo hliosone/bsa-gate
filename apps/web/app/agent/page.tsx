@@ -40,9 +40,7 @@ export default function AgentPage() {
 
   async function onConnect() {
     try {
-      const a = await connect();
-      setAddr(a);
-      if (!owner) setOwner(a);
+      setAddr(await connect());
     } catch (e) {
       say({ error: String((e as Error)?.message ?? e) });
     }
@@ -107,7 +105,8 @@ export default function AgentPage() {
             by the agent&rsquo;s wallet. Revoke removes it, and the agent can no longer pass the gate.</p>
           <label>Your identity handle<input value={userLabel} onChange={(e) => setUserLabel(e.target.value)} placeholder="your-handle" /></label>
           <label>Agent label<input value={agentLabel} onChange={(e) => setAgentLabel(e.target.value)} /></label>
-          <label>Agent wallet address<input value={owner} onChange={(e) => setOwner(e.target.value)} placeholder="0x... (the agent's own wallet)" /></label>
+          <label>Agent wallet address<input value={owner} onChange={(e) => setOwner(e.target.value)} placeholder="0x... the agent's own wallet (can differ from yours)" /></label>
+          <button className="pill mut" style={{ cursor: "pointer", marginTop: 8, border: "1px solid var(--line)" }} disabled={!addr} onClick={() => setOwner(addr)}>Use my connected wallet</button>
           <div className="row" style={{ marginTop: 14 }}>
             <button className="btn sm" disabled={busy || !userLabel} onClick={() => post("/admin/delegate", { userLabel, agentLabel, agentOwner: owner || addr })}>Delegate</button>
             <button className="btn sm ghost" disabled={busy || !userLabel} onClick={() => post("/admin/revoke", { userLabel, agentLabel })}>Revoke</button>

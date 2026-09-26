@@ -6,11 +6,12 @@
  * GET /demo/quote is a self-contained x402 resource (402 -> pay -> 200).
  */
 import express from "express";
-import type { Address, Hex } from "viem";
+import { type Address, type Hex, zeroAddress } from "viem";
+import { getState, getSubregistry } from "@bsa/ens";
 import { RPC_MODE, USDC, account, wallet } from "@bsa/ens/config";
 import { evaluate, type GateContext } from "./gate.js";
 import { setupNamespace, issueIdentity, delegateAgent, revokeAgent } from "./issuer.js";
-import { load, save } from "./deployments.js";
+import { load, save, type Store } from "./deployments.js";
 import { capOf as agentCapOf, principalLabel, setCap, verifyCapAuthorization } from "./policy.js";
 import { record as recordTx, list as listTx } from "./txlog.js";
 import { startPidRequest, pidStatus, mapClaims } from "./eudi.js";
@@ -144,6 +145,19 @@ app.post(
   }),
 );
 
+// Resolve a user's UserRegistry on-chain, backfilling the store from chain when missing,
+// so delegate/revoke work for any issued identity even after a fresh store or volume reset.
+async function ensureUser(store: Store, bsaRegistry: Address, userLabel: string): Promise<{ registry: Address; owner: Address }> {
+  const known = store.users[userLabel];
+  if (known?.registry) return known;
+  const registry = await getSubregistry(bsaRegistry, userLabel);
+  if (registry.toLowerCase() === zeroAddress) throw new Error(`unknown user ${userLabel} (no on-chain identity for ${userLabel}.bsagate.eth)`);
+  const owner = (await getState(bsaRegistry, userLabel)).latestOwner as Address;
+  store.users[userLabel] = { registry, owner };
+  save(store);
+  return store.users[userLabel];
+}
+
 app.post(
   "/admin/delegate",
   wrap(async (req, res) => {
@@ -155,8 +169,7 @@ app.post(
       agentOwner: Address;
       cap?: string;
     };
-    const user = store.users[userLabel];
-    if (!user) throw new Error(`unknown user ${userLabel}`);
+    const user = await ensureUser(store, store.namespace.bsaRegistry, userLabel);
     await delegateAgent(wallet("issuer"), store.namespace, user.registry, agentLabel, agentOwner);
     const agentName = `${agentLabel}.${userLabel}.bsagate.eth`;
     store.agents[agentName] = { owner: agentOwner, cap };
@@ -169,9 +182,9 @@ app.post(
   "/admin/revoke",
   wrap(async (req, res) => {
     const store = load();
+    if (!store.namespace) throw new Error("run /admin/setup first");
     const { userLabel, agentLabel } = req.body as { userLabel: string; agentLabel: string };
-    const user = store.users[userLabel];
-    if (!user) throw new Error(`unknown user ${userLabel}`);
+    const user = await ensureUser(store, store.namespace.bsaRegistry, userLabel);
     await revokeAgent(wallet("issuer"), user.registry, agentLabel);
     const agentName = `${agentLabel}.${userLabel}.bsagate.eth`;
     delete store.agents[agentName];
