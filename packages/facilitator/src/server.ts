@@ -170,6 +170,9 @@ app.post(
       cap?: string;
     };
     const user = await ensureUser(store, store.namespace.bsaRegistry, userLabel);
+    if (!agentOwner) return void res.status(400).json({ error: "agentOwner (the agent's own wallet address) is required" });
+    if (agentOwner.toLowerCase() === user.owner.toLowerCase())
+      return void res.status(400).json({ error: "the agent must use a different wallet than the principal (that is the point of delegation)" });
     await delegateAgent(wallet("issuer"), store.namespace, user.registry, agentLabel, agentOwner);
     const agentName = `${agentLabel}.${userLabel}.bsagate.eth`;
     store.agents[agentName] = { owner: agentOwner, cap };
