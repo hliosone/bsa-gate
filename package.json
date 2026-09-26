@@ -1,0 +1,16 @@
+{
+  "name": "bsa-gate",
+  "private": true,
+  "version": "0.0.0",
+  "packageManager": "pnpm@10.29.1",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "spike": "pnpm --filter @bsa/ens spike"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8",
+    "tsx": "^4.19.2"
+  }
+}
