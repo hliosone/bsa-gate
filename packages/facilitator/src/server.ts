@@ -13,6 +13,8 @@ import { setupNamespace, issueIdentity, delegateAgent, revokeAgent } from "./iss
 import { load, save } from "./deployments.js";
 import { capOf as agentCapOf, principalLabel, setCap, verifyCapAuthorization } from "./policy.js";
 import { record as recordTx, list as listTx } from "./txlog.js";
+import { startPidRequest, pidStatus, mapClaims } from "./eudi.js";
+import { randomUUID, randomBytes } from "node:crypto";
 import type { GateResult, PaymentPayload, PaymentRequirements } from "./types.js";
 
 const PORT = Number(process.env.PORT ?? 8787);
@@ -175,6 +177,46 @@ app.post(
     delete store.agents[agentName];
     save(store);
     res.json({ revoked: agentName });
+  }),
+);
+
+// ── EUDI wallet KYC (OpenID4VP): verify a real PID, derive attestations, then issue ─
+type EudiSession = { tx: string; nonce: string; label: string; owner: Address; createdAt: number; issued?: Promise<{ name: string; registry: Address }> };
+const eudiSessions = new Map<string, EudiSession>();
+const sanitizeLabel = (raw: string) =>
+  ((String(raw ?? "").trim().toLowerCase().replace(/[^a-z0-9-]/g, "") || "guest").slice(0, 24)) + "-" + randomBytes(2).toString("hex");
+
+app.post(
+  "/kyc/eudi/start",
+  wrap(async (req, res) => {
+    const store = load();
+    if (!store.namespace) throw new Error("run /admin/setup first");
+    const { label, owner } = req.body as { label: string; owner: Address };
+    if (!owner) return void res.status(400).json({ error: "owner (wallet address) is required" });
+    const s = await startPidRequest();
+    const sessionId = randomUUID();
+    eudiSessions.set(sessionId, { tx: s.transactionId, nonce: s.nonce, label: sanitizeLabel(label), owner, createdAt: Date.now() });
+    res.json({ sessionId, walletUrl: s.walletUrl, haipUrl: s.haipUrl });
+  }),
+);
+
+app.get(
+  "/kyc/eudi/status/:sessionId",
+  wrap(async (req, res) => {
+    const session = eudiSessions.get(req.params.sessionId);
+    if (!session) return void res.status(404).json({ error: "unknown or expired session" });
+    const st = await pidStatus(session.tx);
+    if (st.state !== "verified") return void res.json(st);
+    // Verified by the EUDI backend: derive attestations and issue exactly once per session.
+    const attestations = mapClaims(st.claims);
+    session.issued ??= issueIdentity(wallet("issuer"), load().namespace!, session.label, session.owner, attestations).then((r) => {
+      const s2 = load();
+      s2.users[session.label] = { registry: r.registry, owner: session.owner };
+      save(s2);
+      return r;
+    });
+    const { name } = await session.issued;
+    res.json({ state: "verified", name, attestations });
   }),
 );
 
