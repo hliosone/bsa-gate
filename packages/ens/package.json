@@ -3,6 +3,10 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "exports": {
+    ".": "./src/ens.ts",
+    "./config": "./src/config.ts"
+  },
   "scripts": {
     "spike": "tsx src/scripts/spike.ts"
   },
