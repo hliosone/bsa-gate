@@ -20,6 +20,22 @@ const USDC_NAME = process.env.USDC_NAME ?? "USDC";
 const USDC_VERSION = process.env.USDC_VERSION ?? "2";
 const ATTESTATIONS = JSON.parse(process.env.REQUIRED_ATTESTATIONS ?? '{"over18":"true"}');
 const DRY_RUN = (process.env.DRY_RUN ?? "true") !== "false";
+const SHOP = process.env.SHOPIFY_SHOP; // e.g. your-store.myshopify.com
+const ADMIN_TOKEN = process.env.SHOPIFY_ADMIN_TOKEN;
+const API = "2024-10";
+
+/** Thin Shopify Admin REST client (live mode only). */
+async function shopify(path, method = "GET", body) {
+  if (!SHOP || !ADMIN_TOKEN) throw new Error("SHOPIFY_SHOP and SHOPIFY_ADMIN_TOKEN are required for live mode");
+  const r = await fetch(`https://${SHOP}/admin/api/${API}/${path}`, {
+    method,
+    headers: { "X-Shopify-Access-Token": ADMIN_TOKEN, "content-type": "application/json" },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const text = await r.text();
+  if (!r.ok) throw new Error(`Shopify ${method} ${path} -> ${r.status}: ${text.slice(0, 300)}`);
+  return text ? JSON.parse(text) : {};
+}
 
 const app = express();
 app.use(express.json());
@@ -29,12 +45,25 @@ const sessions = new Map();
 
 app.get("/health", (_req, res) => res.json({ ok: true, dryRun: DRY_RUN, facilitator: FAC }));
 
-app.get("/checkout", (req, res) => {
+app.get("/checkout", async (req, res) => {
   const amount = String(req.query.amount ?? "19.99");
   const order = String(req.query.order ?? `SHOP-${Date.now()}`);
   const units = String(Math.round(parseFloat(amount) * 1e6));
   const pid = crypto.randomBytes(16).toString("hex");
-  sessions.set(pid, { order, units, settled: false });
+  const session = { order, units, settled: false };
+  if (!DRY_RUN) {
+    // Live: create a real Shopify draft order for this amount; complete it as paid on settle.
+    try {
+      const d = await shopify("draft_orders.json", "POST", {
+        draft_order: { line_items: [{ title: order, price: amount, quantity: 1 }], note: "Paid with USDC via BSA Gate" },
+      });
+      session.draftId = d.draft_order.id;
+      session.order = d.draft_order.name; // e.g. #D1
+    } catch (e) {
+      return res.status(502).send(`Shopify draft order failed: ${String(e.message || e)}`);
+    }
+  }
+  sessions.set(pid, session);
   res.redirect(`/pay?pid=${pid}`);
 });
 
@@ -77,12 +106,23 @@ app.post("/settle", async (req, res) => {
     s.txHash = out.txHash;
     if (DRY_RUN) {
       console.log(`[shopify][DRY_RUN] would mark ${s.order} PAID (tx ${out.txHash})`);
-    } else {
-      // Live: draftOrderComplete + metafieldsSet via Shopify Admin GraphQL with
-      // SHOPIFY_ADMIN_TOKEN. Store-specific — completed manually against a real store.
-      console.log(`[shopify] mark ${s.order} PAID (tx ${out.txHash}) — wire Admin API with token`);
+      return res.json({ paid: true, txHash: out.txHash, order: s.order });
     }
-    return res.json({ paid: true, txHash: out.txHash });
+    // Live: complete the draft order as PAID and stamp the settlement tx on it.
+    try {
+      const done = await shopify(`draft_orders/${s.draftId}/complete.json?payment_pending=false`, "PUT");
+      const orderId = done.draft_order.order_id;
+      s.orderId = orderId;
+      await shopify(`orders/${orderId}/metafields.json`, "POST", {
+        metafield: { namespace: "bsagate", key: "tx_hash", type: "single_line_text_field", value: out.txHash },
+      });
+      console.log(`[shopify] ${s.order} -> order ${orderId} PAID (tx ${out.txHash})`);
+      return res.json({ paid: true, txHash: out.txHash, order: s.order, shopifyOrderId: orderId });
+    } catch (e) {
+      // The on-chain settlement already happened; surface the write-back problem without lying about payment.
+      console.error("[shopify] admin write-back failed:", e.message || e);
+      return res.json({ paid: true, txHash: out.txHash, order: s.order, shopifyWriteback: `failed: ${String(e.message || e)}` });
+    }
   }
   return res.status(402).json({ paid: false, stage: out.stage, error: (out.reasons || []).join("; ") || "blocked" });
 });
