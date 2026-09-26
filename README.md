@@ -127,7 +127,7 @@ pnpm install
 cp .env.example .env                 # fill the 5 role keys (issuer, alice, agent, merchant, bob)
 anvil --fork-url <sepolia-rpc>       # a local fork of Sepolia
 
-pnpm test                            # 29 tests: ENS (7) + gate (10) + policy (12), all on the fork
+pnpm test                            # 36 tests: ENS (7) + gate (10) + policy (12) + EUDI (7)
 
 RPC_MODE=fork PORT=8787 pnpm --filter @bsa/facilitator start
 sh packages/facilitator/scripts/fork-setup.sh   # deploy namespace + issue alice/agent/bob
@@ -154,9 +154,9 @@ The full flow — including real Intercepta screening — ran on **real Sepolia*
 
 ## Status
 
-ENS layer ✓ (incl. per-key `authorizeTextRoles` ✓) · facilitator gate ✓ (**29/29 tests**) ·
+ENS layer ✓ (incl. per-key `authorizeTextRoles` ✓) · facilitator gate ✓ (**36/36 tests**) ·
 principal-signed spend cap ✓ · agent revocation ✓ · agent a2a proven live ✓ · **live Intercepta
-screening ✓** · WooCommerce plugin ✓ (per-product ✓) · Shopify service ✓ (per-product ✓) · Next.js
+screening ✓** · **EU wallet KYC (EUDI / OpenID4VP) ✓** · WooCommerce plugin ✓ (per-product ✓) · Shopify service ✓ (per-product ✓) · Next.js
 web app: live activity feed with block reasons + **judge self-serve verification** ✓ · **settled live on Sepolia ✓**.
 
 **Deployed:** facilitator on Railway (Dockerfile) + web app on Vercel — both public (see **Live demo** above),
