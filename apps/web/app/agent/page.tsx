@@ -1,18 +1,25 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FACILITATOR, SETCAP_DOMAIN, SETCAP_TYPES, connect, eth } from "../config";
+
+// "guest-1a2b.bsagate.eth" -> "guest-1a2b"
+const labelOf = (name: string) => name.trim().replace(/\.bsagate\.eth$/i, "").split(".").pop() || "";
 
 export default function AgentPage() {
   const [addr, setAddr] = useState("");
   const [busy, setBusy] = useState(false);
   const [log, setLog] = useState("");
-  const [userLabel, setUserLabel] = useState("alice");
-  const [att, setAtt] = useState('{"over18":"true","jurisdiction":"CH"}');
+  const [userLabel, setUserLabel] = useState("");
   const [agentLabel, setAgentLabel] = useState("agent");
   const [owner, setOwner] = useState("");
-  const [capName, setCapName] = useState("agent.alice.bsagate.eth");
   const [capUsdc, setCapUsdc] = useState("50");
 
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search).get("name");
+    if (p) setUserLabel(labelOf(p));
+  }, []);
+
+  const capName = userLabel ? `${agentLabel}.${userLabel}.bsagate.eth` : "";
   const say = (o: unknown) => setLog(JSON.stringify(o, null, 2));
 
   async function post(path: string, body?: unknown) {
@@ -43,6 +50,7 @@ export default function AgentPage() {
 
   // The principal (owner of the parent identity) signs the cap change; the agent cannot.
   async function signCap(clear: boolean) {
+    if (!capName) { say({ error: "enter your identity handle first (the agent lives under it)" }); return; }
     setBusy(true);
     try {
       let capBase = "0";
@@ -51,7 +59,7 @@ export default function AgentPage() {
         if (!Number.isFinite(n) || n <= 0) { say({ error: "cap must be a positive number of USDC" }); return; }
         capBase = String(Math.round(n * 1e6));
       }
-      const from = await connect(); // must be the principal, e.g. the owner of alice.bsagate.eth
+      const from = await connect(); // must be the principal, e.g. the owner of your identity
       const deadline = String(Math.floor(Date.now() / 1000) + 3600);
       const message = { agentName: capName, cap: capBase, deadline };
       const typedData = { types: SETCAP_TYPES, domain: SETCAP_DOMAIN, primaryType: "SetCap", message };
@@ -72,60 +80,49 @@ export default function AgentPage() {
   return (
     <>
       <section style={{ padding: "40px 0 8px" }}>
-        <p className="section-title">Issuer console</p>
-        <h2>Manage identities & agents</h2>
+        <p className="section-title">Agent console</p>
+        <h2>Delegate an AI agent to your identity</h2>
         <p className="lede" style={{ fontSize: 17 }}>
-          Stand up the namespace, issue a KYC&rsquo;d identity, delegate a revocable agent, and cap what it may spend.
-          In production the principal signs their own revoke — their on-chain kill switch; here the issuer mediates for
-          the demo.
+          Your agent gets its own sub-name that it owns, inherits your attestations, and can only spend up to a cap you
+          set. You can revoke it on-chain at any time. The cap change is signed by you, the principal, so the agent can
+          never raise its own limit.
         </p>
       </section>
 
-      <div className="row">
-        <button className="btn" onClick={onConnect}>
-          {addr ? `Connected ${addr.slice(0, 6)}…${addr.slice(-4)}` : "Connect wallet"}
-        </button>
-        <button className="btn ghost" disabled={busy} onClick={() => post("/admin/setup")}>Setup namespace</button>
+      <div className="note" style={{ maxWidth: 720 }}>
+        Use the identity you created on <a href="/get-verified">Get verified</a>. Open this page from there and your
+        handle is filled in automatically.
       </div>
 
-      <div className="grid cols-3" style={{ marginTop: 18, alignItems: "start" }}>
-        <div className="card">
-          <h3>Issue identity</h3>
-          <label>Label<input value={userLabel} onChange={(e) => setUserLabel(e.target.value)} /></label>
-          <label>Owner address<input value={owner} onChange={(e) => setOwner(e.target.value)} placeholder="0x… (defaults to connected)" /></label>
-          <label>Attestations (JSON)<input value={att} onChange={(e) => setAtt(e.target.value)} /></label>
-          <div className="row" style={{ marginTop: 14 }}>
-            <button
-              className="btn sm"
-              disabled={busy}
-              onClick={() => {
-                let a: unknown;
-                try { a = JSON.parse(att); } catch { return say({ error: "attestations must be valid JSON" }); }
-                return post("/admin/issue", { label: userLabel, owner: owner || addr, attestations: a });
-              }}
-            >Issue</button>
-          </div>
-        </div>
+      <div className="row">
+        <button className="btn" onClick={onConnect}>
+          {addr ? `Connected ${addr.slice(0, 6)}...${addr.slice(-4)}` : "Connect wallet"}
+        </button>
+      </div>
 
+      <div className="grid cols-2" style={{ marginTop: 18, alignItems: "start" }}>
         <div className="card">
-          <h3>Delegate / revoke agent</h3>
-          <label>User label<input value={userLabel} onChange={(e) => setUserLabel(e.target.value)} /></label>
+          <h3>Delegate or revoke an agent</h3>
+          <p style={{ marginTop: 0 }}>The issuer mints <span className="mono">{capName || "agent.your-handle.bsagate.eth"}</span> owned
+            by the agent&rsquo;s wallet. Revoke removes it, and the agent can no longer pass the gate.</p>
+          <label>Your identity handle<input value={userLabel} onChange={(e) => setUserLabel(e.target.value)} placeholder="your-handle" /></label>
           <label>Agent label<input value={agentLabel} onChange={(e) => setAgentLabel(e.target.value)} /></label>
-          <label>Agent owner address<input value={owner} onChange={(e) => setOwner(e.target.value)} /></label>
+          <label>Agent wallet address<input value={owner} onChange={(e) => setOwner(e.target.value)} placeholder="0x... (the agent's own wallet)" /></label>
           <div className="row" style={{ marginTop: 14 }}>
-            <button className="btn sm" disabled={busy} onClick={() => post("/admin/delegate", { userLabel, agentLabel, agentOwner: owner || addr })}>Delegate</button>
-            <button className="btn sm ghost" disabled={busy} onClick={() => post("/admin/revoke", { userLabel, agentLabel })}>Revoke</button>
+            <button className="btn sm" disabled={busy || !userLabel} onClick={() => post("/admin/delegate", { userLabel, agentLabel, agentOwner: owner || addr })}>Delegate</button>
+            <button className="btn sm ghost" disabled={busy || !userLabel} onClick={() => post("/admin/revoke", { userLabel, agentLabel })}>Revoke</button>
           </div>
         </div>
 
         <div className="card">
-          <h3>Spend cap</h3>
-          <p style={{ marginTop: 0 }}>A per-payment ceiling on the agent, enforced by the gate. The <b>principal signs</b> the change, so the agent can never raise its own cap.</p>
-          <label>Agent name<input value={capName} onChange={(e) => setCapName(e.target.value)} /></label>
+          <h3>Set the spend cap</h3>
+          <p style={{ marginTop: 0 }}>A per-payment ceiling on the agent, enforced by the gate. You sign the change, so
+            the agent can never raise it.</p>
+          <label>Agent name<input value={capName} readOnly placeholder="delegate an agent first" /></label>
           <label>Cap (USDC)<input value={capUsdc} onChange={(e) => setCapUsdc(e.target.value)} placeholder="e.g. 50" /></label>
           <div className="row" style={{ marginTop: 14 }}>
-            <button className="btn sm" disabled={busy} onClick={() => signCap(false)}>Sign &amp; set cap</button>
-            <button className="btn sm ghost" disabled={busy} onClick={() => signCap(true)}>Sign &amp; clear</button>
+            <button className="btn sm" disabled={busy || !capName} onClick={() => signCap(false)}>Sign &amp; set cap</button>
+            <button className="btn sm ghost" disabled={busy || !capName} onClick={() => signCap(true)}>Sign &amp; clear</button>
           </div>
         </div>
       </div>

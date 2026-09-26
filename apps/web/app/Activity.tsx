@@ -84,7 +84,7 @@ export default function Activity() {
             </thead>
             <tbody>
               {txs === null && !err && <tr><td colSpan={7} className="empty">Loading…</td></tr>}
-              {err && <tr><td colSpan={7} className="empty">Facilitator offline — start it on :8787 to see live payments.</td></tr>}
+              {err && <tr><td colSpan={7} className="empty">The facilitator is not reachable right now. Try again in a moment.</td></tr>}
               {txs !== null && rows.length === 0 && !err && (
                 <tr><td colSpan={7} className="empty">No payments yet. Run the checkout demo to see one here.</td></tr>
               )}
@@ -104,11 +104,11 @@ export default function Activity() {
                   </td>
                   <td>
                     {!t.txHash ? (
-                      <span className="mono" style={{ color: "var(--muted)" }}>—</span>
+                      <span className="mono" style={{ color: "var(--muted)" }}>&middot;</span>
                     ) : mode === "live" ? (
                       <a className="mono" href={`https://sepolia.etherscan.io/tx/${t.txHash}`} target="_blank" rel="noreferrer">{short(t.txHash)}</a>
                     ) : (
-                      <span className="mono" title="Settled on a local Anvil fork — not on public Sepolia.">
+                      <span className="mono" title="Settled on a local Anvil fork, not on public Sepolia.">
                         {short(t.txHash)} <span className="pill mut">local fork</span>
                       </span>
                     )}

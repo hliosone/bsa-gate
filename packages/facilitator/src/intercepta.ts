@@ -53,7 +53,7 @@ export async function screen({ payer, payee }: ScreenInput): Promise<ScreenResul
         const r = await quickScan(addr, apiKey);
         if (r.flagged) reasons.push(`${label} ${addr} flagged (${r.why.join(", ")})`);
       } catch (e) {
-        reasons.push(`Intercepta screen failed for ${label} (${String(e)}) — failing closed`);
+        reasons.push(`Intercepta screen failed for ${label} (${String(e)}), failing closed`);
       }
     }
     return { ok: reasons.length === 0, reasons, live: true };

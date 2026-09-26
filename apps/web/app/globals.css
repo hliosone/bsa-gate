@@ -1,4 +1,4 @@
-/* BSA Gate — design system. System-native type (Apple/Google-clean), one accent,
+/* BSA Gate design system. System-native type (Apple/Google-clean), one accent,
    hairline structure, restrained depth + motion. Light + dark. */
 
 :root {
@@ -123,7 +123,13 @@ section { padding: 30px 0; }
 h2 { font-size: clamp(24px, 4vw, 32px); letter-spacing: -0.025em; font-weight: 680; margin: 0 0 8px; }
 .grid { display: grid; gap: 16px; }
 .cols-3 { grid-template-columns: repeat(3, 1fr); }
-@media (max-width: 760px) { .cols-3 { grid-template-columns: 1fr; } }
+.cols-2 { grid-template-columns: repeat(2, 1fr); }
+@media (max-width: 760px) { .cols-3, .cols-2 { grid-template-columns: 1fr; } }
+/* numbered step badge (guided flow) */
+.stepno { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 8px; background: var(--accent-weak); color: var(--accent); font-family: var(--mono); font-size: 13px; font-weight: 600; margin-bottom: 10px; }
+.card .cta-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+.note { font-size: 13.5px; color: var(--muted); background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin: 14px 0; }
+.note b { color: var(--ink-2); }
 .card {
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px;
   box-shadow: var(--shadow-sm); transition: transform .15s ease, box-shadow .2s, border-color .2s;

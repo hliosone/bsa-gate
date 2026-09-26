@@ -3,7 +3,8 @@ import type { ReactNode } from "react";
 
 export const metadata = {
   title: "BSA Gate",
-  description: "A safety and compliance gate for stablecoin payments — ENSv2 decides who may pay, Intercepta decides if it's safe, then it settles over x402 on Ethereum.",
+  description:
+    "A safety and compliance gate for stablecoin payments. ENSv2 decides who may pay, Intercepta decides if it is safe, then it settles over x402 on Ethereum.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
@@ -18,13 +19,14 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               <a href="/get-verified">Get verified</a>
               <a href="/checkout">Checkout</a>
               <a className="hide-sm" href="/agent">Agent console</a>
+              <a className="hide-sm" href="/merchants">For merchants</a>
             </nav>
           </div>
         </header>
         <main className="wrap">{children}</main>
         <footer>
           <div className="wrap">
-            BSA Gate — one gate for stablecoin payments. ENSv2 decides who may pay, Intercepta decides whether it&rsquo;s
+            BSA Gate is one gate for stablecoin payments. ENSv2 decides who may pay, Intercepta decides whether it&rsquo;s
             safe, then USDC settles over x402 on Ethereum Sepolia.
           </div>
         </footer>

@@ -34,7 +34,7 @@ export default function GetVerified() {
       });
       const out = await r.json();
       if (!r.ok || out.error) {
-        setStatus({ msg: out.error || "Issue failed — try a different handle.", kind: "err" });
+        setStatus({ msg: out.error || "Issue failed. Try a different handle.", kind: "err" });
         return;
       }
       setIssued(out.name);
@@ -53,7 +53,7 @@ export default function GetVerified() {
         <h2>Issue yourself a BSA Gate identity</h2>
         <p className="lede" style={{ fontSize: 17 }}>
           Connect your wallet, pick your traits, and the issuer mints you a <span className="mono">&lt;handle&gt;.bsagate.eth</span>{" "}
-          identity with attestations only the issuer can write. Then try the checkout — the gate reads your real
+          identity with attestations only the issuer can write. Then try the checkout: the gate reads your real
           attestations and decides. (Demo: you self-select traits; in production these come from real KYC.)
         </p>
       </section>
@@ -80,8 +80,9 @@ export default function GetVerified() {
         <p className={"status " + (status.kind || "")}>{status.msg}</p>
         {issued && (
           <p style={{ marginTop: 12 }}>
-            Issued <span className="mono">{issued}</span>. →{" "}
-            <a href={`/checkout?name=${encodeURIComponent(issued)}`}>Try the checkout with this identity →</a>
+            Issued <span className="mono">{issued}</span>. Next:{" "}
+            <a href={`/checkout?name=${encodeURIComponent(issued)}`}>try the checkout</a>, or{" "}
+            <a href={`/agent?name=${encodeURIComponent(issued)}`}>delegate an agent</a>.
           </p>
         )}
       </div>
