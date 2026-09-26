@@ -16,8 +16,11 @@ Feedback (3–5 lines):
 - One improvement with the most impact: a single "screen this payment" call that takes payer +
   payTo + token + the EIP-3009/authorization together and returns one verdict, so a facilitator
   makes one round-trip instead of three.
-- _Time-to-first-successful-call and any friction: to be completed against the live key (the key
-  arrives by email; our integration is live-call-ready — set `INTERCEPTA_API_KEY`)._
+- Time to first successful call: about 5 minutes after the key arrived (create key, `curl` the
+  `quick-scan` endpoint with `X-API-KEY`, get a verdict). No auth friction — one header. The one
+  thing to learn: quick-scan flags a curated set, so a sanctioned exploiter scored `toxicScore 100`
+  with `sanction_address`/`known_scammer` traits while some famous addresses scored 0 — pick demo
+  addresses from a known-bad list. We call it live, before settlement, and it decides pay vs block.
 
 ## ENS (ENSv2)
 
@@ -27,8 +30,9 @@ Feedback:
 - The `sepolia-fix` build of `@ensdomains/ensjs` was essential — the docs "deployments" page lists
   a pre-redeploy address set; sourcing addresses/ABIs from the package avoided building on dead
   contracts. Surfacing the current addresses more prominently in the docs would help.
-- Per-key resolver authorization (`authorizeTextRoles(name, key, account)`) + registering names
-  without `ROLE_SET_RESOLVER` is exactly what an attestation authority needs (owner can't forge).
-  This is a genuinely differentiated capability.
+- Registering names without `ROLE_SET_RESOLVER` and keeping the issuer as the resolver admin so
+  only we can write attestations (the name owner can't forge them) is exactly what an attestation
+  authority needs — a genuinely differentiated capability. Per-key resolver authorization
+  (`authorizeTextRoles(name, key, account)`), to delegate a single record key, is the natural next step.
 - Small sharp edges that cost time: `grantRoles` reverts on `ROOT_RESOURCE` (must use
   `grantRootRoles`); `getSubregistry` takes the string label while `getState` takes the labelhash.
