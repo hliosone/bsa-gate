@@ -3,6 +3,8 @@ import { account, wallet, USDC } from "@bsa/ens/config";
 import { signTransferAuthorization, usdcBalance } from "./eip3009.js";
 import { setupNamespace, issueIdentity, delegateAgent, type Namespace } from "./issuer.js";
 import { evaluate, type GateContext } from "./gate.js";
+import { capOf as policyCapOf, setCap } from "./policy.js";
+import type { Store } from "./deployments.js";
 import type { PaymentPayload, PaymentRequirements } from "./types.js";
 
 const issuer = wallet("issuer");
@@ -64,6 +66,28 @@ describe("BSA Gate — full vertical slice (fork)", () => {
     expect(res.ok).toBe(false);
     expect(res.stage).toBe("ens");
     expect(res.reasons.join(" ")).toContain("cap");
+  });
+
+  it("BLOCK (ENS): per-agent policy cap (capOf) exceeded", async () => {
+    const store: Store = { users: {}, agents: { "agent.alice.bsagate.eth": { owner: agent, cap: (AMOUNT - 1n).toString() } } };
+    const capCtx: GateContext = { ...ctx, capOf: (n) => policyCapOf(store, n) };
+    const payload: PaymentPayload = { authorization: await pay("agent"), ensName: "agent.alice.bsagate.eth" };
+    const res = await evaluate(capCtx, payload, baseReq());
+    expect(res.ok).toBe(false);
+    expect(res.stage).toBe("ens");
+    expect(res.reasons.join(" ")).toContain("cap");
+  });
+
+  it("PASS: within the per-agent policy cap (capOf) → settles", async () => {
+    const before = await usdcBalance(USDC, merchant);
+    const store = setCap({ users: {}, agents: { "agent.alice.bsagate.eth": { owner: agent } } }, "agent.alice.bsagate.eth", AMOUNT);
+    const capCtx: GateContext = { ...ctx, capOf: (n) => policyCapOf(store, n) };
+    const payload: PaymentPayload = { authorization: await pay("agent"), ensName: "agent.alice.bsagate.eth" };
+    const res = await evaluate(capCtx, payload, baseReq());
+    expect(res.ok, res.reasons.join("; ")).toBe(true);
+    expect(res.stage).toBe("settle");
+    const after = await usdcBalance(USDC, merchant);
+    expect(after - before).toBe(AMOUNT);
   });
 
   it("BLOCK (Intercepta): flagged payee → blocked before settle", async () => {

@@ -11,6 +11,7 @@ import { RPC_MODE, USDC, account, wallet } from "@bsa/ens/config";
 import { evaluate, type GateContext } from "./gate.js";
 import { setupNamespace, issueIdentity, delegateAgent, revokeAgent } from "./issuer.js";
 import { load, save } from "./deployments.js";
+import { capOf as agentCapOf, setCap } from "./policy.js";
 import { record as recordTx, list as listTx } from "./txlog.js";
 import type { GateResult, PaymentPayload, PaymentRequirements } from "./types.js";
 
@@ -76,10 +77,7 @@ function context(): GateContext {
     bsaRegistry: store.namespace.bsaRegistry,
     resolver: store.namespace.resolver,
     relayer: wallet("issuer"),
-    capOf: (ensName) => {
-      const c = store.agents[ensName]?.cap;
-      return c ? BigInt(c) : undefined;
-    },
+    capOf: (ensName) => agentCapOf(store, ensName),
   };
 }
 
@@ -178,6 +176,23 @@ app.post(
     res.json({ revoked: agentName });
   }),
 );
+
+// ── policy (per-agent spend cap; principal sets it, facilitator enforces) ───────
+app.post(
+  "/policy/cap",
+  wrap(async (req, res) => {
+    const { agentName, cap } = req.body as { agentName: string; cap?: string | null };
+    const next = setCap(load(), agentName, cap != null && cap !== "" ? BigInt(cap) : null);
+    save(next);
+    res.json({ agentName, cap: next.agents[agentName]?.cap ?? null });
+  }),
+);
+
+app.get("/policy/caps", (_req, res) => {
+  const store = load();
+  const caps = Object.fromEntries(Object.entries(store.agents).map(([k, v]) => [k, v.cap ?? null]));
+  res.json({ caps });
+});
 
 // ── gate ──────────────────────────────────────────────────────────────────────
 app.post(
